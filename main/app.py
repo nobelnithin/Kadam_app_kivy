@@ -9,10 +9,10 @@ class ESP32App(App):
     def build(self):
         layout = BoxLayout(orientation='vertical')
 
-        # Only message input field and send button
-        self.message_input = TextInput(hint_text='Message to send')
+        # Integer input field with hint text
+        self.message_input = TextInput(hint_text='Enter an integer', input_filter='int')
         
-        send_button = Button(text='Send Message')
+        send_button = Button(text='Send Integer')
         send_button.bind(on_press=self.send_message)
 
         layout.add_widget(self.message_input)
@@ -20,17 +20,19 @@ class ESP32App(App):
         
         return layout
 
-    # Move the send_message method inside the ESP32App class
     def send_message(self, instance):
-        message = self.message_input.text
-        url = "http://192.168.4.1/message"
-        
         try:
-            # Send the message with a Content-Type header
+            # Convert input to an integer
+            message = int(self.message_input.text)
+            url = "http://192.168.4.1/message"
+            
+            # Send the integer as plain text
             headers = {'Content-Type': 'text/plain'}
-            response = requests.post(url, data=message, headers=headers)
+            response = requests.post(url, data=str(message), headers=headers)
             
             print("Response from ESP32:", response.text)
+        except ValueError:
+            print("Please enter a valid integer.")
         except Exception as e:
             print("Error:", e)
 
