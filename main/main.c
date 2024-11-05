@@ -1,4 +1,5 @@
 // #include <string.h>
+// #include <stdlib.h>
 // #include "freertos/FreeRTOS.h"
 // #include "freertos/task.h"
 // #include "esp_event.h"
@@ -48,13 +49,16 @@
 //     }
 
 //     content[ret] = '\0';  // Null-terminate the received string
-//     ESP_LOGI(TAG, "Received message: %s", content);
+//     ESP_LOGI(TAG, "Received message as string: %s", content);
+
+//     // Convert received message to an integer
+//     int received_integer = atoi(content);
+//     ESP_LOGI(TAG, "Received integer: %d", received_integer);
 
 //     // Respond with a success message
-//     httpd_resp_send(req, "Message received", HTTPD_RESP_USE_STRLEN);
+//     httpd_resp_send(req, "Integer received", HTTPD_RESP_USE_STRLEN);
 //     return ESP_OK;
 // }
-
 
 // // Function to start the web server
 // httpd_handle_t start_webserver(void)
@@ -134,6 +138,7 @@
 // }
 
 
+
 #include <string.h>
 #include <stdlib.h>
 #include "freertos/FreeRTOS.h"
@@ -152,9 +157,21 @@
 
 static const char *TAG = "wifi softAP";
 
-// HTTP POST handler to receive message
-esp_err_t message_post_handler(httpd_req_t *req)
-{
+// HTTP GET handler to send a random number
+esp_err_t random_number_get_handler(httpd_req_t *req) {
+    int random_number = rand() % 100;  // Generate random number between 0-99
+    char response[20];
+    snprintf(response, sizeof(response), "%d", random_number);
+
+    ESP_LOGI(TAG, "Sending random number: %s", response);
+
+    httpd_resp_set_type(req, "text/plain");
+    httpd_resp_send(req, response, HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+}
+
+// HTTP POST handler to receive messages
+esp_err_t message_post_handler(httpd_req_t *req) {
     // Check the Content-Type header to ensure it’s text/plain
     if (httpd_req_get_hdr_value_len(req, "Content-Type") == 9) { // length of "text/plain"
         char content_type[10];
@@ -197,12 +214,12 @@ esp_err_t message_post_handler(httpd_req_t *req)
 }
 
 // Function to start the web server
-httpd_handle_t start_webserver(void)
-{
+httpd_handle_t start_webserver(void) {
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
 
     if (httpd_start(&server, &config) == ESP_OK) {
+        // Register the POST handler
         httpd_uri_t message_uri = {
             .uri       = "/message",
             .method    = HTTP_POST,
@@ -210,6 +227,15 @@ httpd_handle_t start_webserver(void)
             .user_ctx  = NULL
         };
         httpd_register_uri_handler(server, &message_uri);
+
+        // Register the GET handler for random numbers
+        httpd_uri_t random_number_uri = {
+            .uri       = "/random",
+            .method    = HTTP_GET,
+            .handler   = random_number_get_handler,
+            .user_ctx  = NULL
+        };
+        httpd_register_uri_handler(server, &random_number_uri);
     }
     return server;
 }
@@ -256,9 +282,9 @@ void wifi_init_softap(void)
              EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS, EXAMPLE_ESP_WIFI_CHANNEL);
 }
 
-void app_main(void)
-{
-    // Initialize NVS
+
+void app_main(void) {
+    // Initialize NVS and start Wi-Fi in AP mode
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
