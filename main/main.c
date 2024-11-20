@@ -150,8 +150,8 @@
 #include "esp_wifi.h"
 #include "esp_http_server.h"
 
-#define EXAMPLE_ESP_WIFI_SSID "punda"
-#define EXAMPLE_ESP_WIFI_PASS "pundamon"
+#define EXAMPLE_ESP_WIFI_SSID "bioSTEP+"
+#define EXAMPLE_ESP_WIFI_PASS "biostim"
 #define EXAMPLE_ESP_WIFI_CHANNEL 1
 #define EXAMPLE_MAX_STA_CONN 4
 

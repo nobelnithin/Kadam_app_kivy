@@ -1,4 +1,3 @@
-
 import kivy
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
@@ -6,24 +5,37 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
 from kivy.clock import Clock
 import requests
-import matplotlib.pyplot as plt
-from kivy_garden.matplotlib import FigureCanvasKivyAgg
-
+from kivy_garden.graph import Graph, LinePlot
 
 class KADAM(App):
     def build(self):
         layout = BoxLayout(orientation='vertical')
         
-        # Initialize the graph plot
-        self.fig, self.ax = plt.subplots()
-        self.ax.set_title('ESP32 Data Plot')
-        self.ax.set_xlabel('Time')
-        self.ax.set_ylabel('Random Number')
-        self.plot_data = []
+        # Create a graph widget with ymin and ymax set to -99 and 99
+        self.graph = Graph(
+            xlabel='Time',
+            ylabel='Random Number',
+            x_ticks_minor=5,
+            x_ticks_major=1,
+            y_ticks_major=10,
+            y_grid_label=True,
+            x_grid_label=True,
+            padding=5,
+            x_grid=True,
+            y_grid=True,
+            xmin=0,
+            xmax=20,
+            ymin=-99,  # Set the minimum y-axis value to -99
+            ymax=99    # Set the maximum y-axis value to 99
+        )
         
-        # Create a canvas for the graph and add it to the layout
-        self.canvas = FigureCanvasKivyAgg(self.fig)
-        layout.add_widget(self.canvas)
+        # Create a LinePlot instance
+        self.plot = LinePlot(line_width=1.5, color=[1, 0, 0, 1])  # Red color plot
+        self.plot.points = []
+        self.graph.add_plot(self.plot)
+        
+        # Add the graph widget to the layout
+        layout.add_widget(self.graph)
         
         # Integer input field with hint text
         self.message_input = TextInput(hint_text='Enter an integer', input_filter='int')
@@ -33,6 +45,9 @@ class KADAM(App):
         
         layout.add_widget(self.message_input)
         layout.add_widget(send_button)
+        
+        # Initialize time counter
+        self.time = 0
         
         # Schedule to update the plot every second
         Clock.schedule_interval(self.update_plot, 1)
@@ -63,16 +78,19 @@ class KADAM(App):
             if response.status_code == 200:
                 random_number = int(response.text)  # Convert response to integer
                 
-                # Append the new number and trim the plot_data list to a max length
-                self.plot_data.append(random_number)
-                if len(self.plot_data) > 20:  # Keep the last 20 points
-                    self.plot_data.pop(0)
+                # Update the plot with the new point
+                if len(self.plot.points) > 20:  # Keep the last 20 points
+                    self.plot.points.pop(0)
                 
-                # Clear and update the plot
-                self.ax.clear()
-                self.ax.plot(self.plot_data, label="ESP32 Data")
-                self.ax.legend(loc='upper left')
-                self.canvas.draw()
+                # Append new point with time increment (self.time, random_number)
+                self.plot.points.append((self.time, random_number))
+                self.time += 1  # Increment the time for the next point
+                
+                # Adjust x-axis to move with new points after 20 points
+                if self.time > 20:
+                    self.graph.xmin = self.time - 20
+                    self.graph.xmax = self.time
+
             else:
                 print("Failed to retrieve data from ESP32")
                 
